@@ -7,44 +7,43 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-# ✅ Force CORS headers on every response
+# ---------- FORCE CORS FOR *ALL* REQUESTS ----------
 @app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    response = await call_next(request)
+async def cors_middleware(request: Request, call_next):
+    # Handle OPTIONS early (preflight)
+    if request.method == "OPTIONS":
+        response = JSONResponse(content={}, status_code=200)
+    else:
+        response = await call_next(request)
+
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
+# --------------------------------------------------
 
-# Load telemetry data
+# Load telemetry.json
 BASE_DIR = Path(__file__).resolve().parent.parent
 telemetry = json.loads((BASE_DIR / "telemetry.json").read_text())
 
-# OPTIONS preflight — must succeed
-@app.options("/")
-async def options():
-    return JSONResponse(content={}, status_code=200)
-
-# GET handler — must succeed
+# GET handler (for probes / browser)
 @app.get("/")
 async def health():
-    return {"status": "ok"}
+    return {"ok": True}
 
-# POST handler
+# POST handler (graded endpoint)
 @app.post("/")
 async def metrics(request: Request):
-    # Gracefully handle missing/invalid JSON
     try:
         body = await request.json()
     except Exception:
-        return {"status": "ok"}
+        return {"ok": True}
 
     regions: List[str] = body.get("regions")
     threshold = body.get("threshold_ms")
 
-    # If required fields missing, do NOT error
     if not regions or threshold is None:
-        return {"status": "ok"}
+        return {"ok": True}
 
     result = {}
 

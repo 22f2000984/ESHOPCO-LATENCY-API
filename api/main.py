@@ -3,35 +3,37 @@ import statistics
 from pathlib import Path
 from typing import List
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 app = FastAPI()
 
-# ---------- FORCE CORS FOR *ALL* REQUESTS ----------
+# --------- HARD CORS GUARANTEE ----------
+@app.options("/")
+def cors_preflight():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+# ---------------------------------------
+
 @app.middleware("http")
-async def cors_middleware(request: Request, call_next):
-    # Handle OPTIONS early (preflight)
-    if request.method == "OPTIONS":
-        response = JSONResponse(content={}, status_code=200)
-    else:
-        response = await call_next(request)
-
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
     return response
-# --------------------------------------------------
 
-# Load telemetry.json
+# Load telemetry
 BASE_DIR = Path(__file__).resolve().parent.parent
 telemetry = json.loads((BASE_DIR / "telemetry.json").read_text())
 
-# GET handler (for probes / browser)
 @app.get("/")
-async def health():
+def health():
     return {"ok": True}
 
-# POST handler (graded endpoint)
 @app.post("/")
 async def metrics(request: Request):
     try:
@@ -46,10 +48,8 @@ async def metrics(request: Request):
         return {"ok": True}
 
     result = {}
-
     for region in regions:
         records = [r for r in telemetry if r["region"] == region]
-
         latencies = [r["latency_ms"] for r in records]
         uptimes = [r["uptime_pct"] for r in records]
 
@@ -60,4 +60,7 @@ async def metrics(request: Request):
             "breaches": sum(1 for l in latencies if l > threshold),
         }
 
-    return result
+    return JSONResponse(
+        content=result,
+        headers={"Access-Control-Allow-Origin": "*"},
+    )

@@ -1,0 +1,16 @@
+[
+  {
+    "region": "apac",
+    "service": "checkout",
+    "latency_ms": 133.19,
+    "uptime_pct": 97.682,
+    "timestamp": 20250301
+  },
+  {
+    "region": "emea",
+    "service": "recommendations",
+    "latency_ms": 229.2,
+    "uptime_pct": 97.703,
+    "timestamp": 20250301
+  }
+]

@@ -1,23 +1,38 @@
 import json
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from statistics import mean
 
 app = FastAPI()
 
+# ✅ CORS – must be explicit
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
+# ✅ Load JSON safely
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "q-vercel-latency.json")
 
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     telemetry = json.load(f)
+
+# ✅ Explicit OPTIONS handler (CRITICAL)
+@app.options("/api")
+async def options_handler():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 @app.post("/api")
 async def latency_metrics(request: Request):

@@ -6,7 +6,6 @@ from statistics import mean
 
 app = FastAPI()
 
-# ✅ CORS (required by grader)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,14 +13,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Load telemetry JSON safely on Vercel
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "q-vercel-latency.json")
 
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     telemetry = json.load(f)
 
-@app.post("/")
+@app.post("/api")
 async def latency_metrics(request: Request):
     body = await request.json()
     regions = body["regions"]
